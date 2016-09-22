@@ -1,20 +1,8 @@
-
-
-
-
-// The app should then prompt users with two messages.
-// The first should ask them the ID of the product they would like to buy.
-// The second message should ask how many units of the product they would like to buy.
-// Once the customer has placed the order, your application should check if your store has enough of the product to meet the customer's request.
-// If not, the app should log a phrase like Insufficient quantity!, and then prevent the order from going through.
-// However, if your store does have enough of the product, you should fulfill the customer's order.
-// This means updating the SQL database to reflect the remaining quantity.
-// Once the update goes through, show the customer the total cost of their purchase.
-
 // require node packages
 var mysql = require('mysql');
 var prompt = require('prompt');
 var inquirer = require('inquirer');
+var Table = require('cli-table');
 
 // database connection
 var connection = mysql.createConnection({
@@ -48,8 +36,28 @@ connection.connect(function(err) {
 // });
 
 var buy = function() {
-    connection.query('SELECT * FROM Products', function(err, res) {
-    	console.log(res);
+    connection.query('SELECT * FROM Products', function(err, res, fields) {
+    	// console.log(res);
+
+
+// instantiate 
+var table = new Table({
+    head:["ItemID", "Product Name", "Department Name", "Price", "Quantity"]
+  // , colWidths: [100, 200]
+});
+ 
+// table is an Array, so you can `push`, `unshift`, `splice` and friends 
+
+for (var i= 0; i<res.length;i++){
+
+table.push([res[i].ItemID, res[i].ProductName, res[i].DepartmentName, res[i].Price, res[i].StockQuantity]);
+
+}
+ 
+console.log(table.toString());
+
+    	// The app should then prompt users with two messages.
+		// The first should ask them the ID of the product they would like to buy.
         inquirer.prompt({
             name: "choice",
             type: "list",
@@ -66,13 +74,17 @@ var buy = function() {
             for (var i = 0; i < res.length; i++) {
                 if (res[i].ProductName == answer.choice) {
                     var chosenItem = res[i];
+                    // The second message should ask how many units of the product they would like to buy.
                     inquirer.prompt({
                         name: "quantity",
                         type: "input",
                         message: "How many would you like to purchase?"
                     }).then(function(answer) {
+
+                    	// Once the customer has placed the order,  check if your store has enough of the product to meet the customer's request.
                         if (chosenItem.StockQuantity < parseInt(answer.quantity)) {
 
+                        	// If not, the app should log a phrase like Insufficient quantity!, and then prevent the order from going through.
                         	console.log('Sorry, Insufficient Quantity. Cannot Fulfill Transaction');
 
 
@@ -80,6 +92,8 @@ var buy = function() {
                         } else {
                         	var qty = parseInt(answer.quantity);
 
+                        	// However, if your store does have enough of the product, you should fulfill the customer's order.
+							// This means updating the SQL database to reflect the remaining quantity.
                         	connection.query("UPDATE Products SET ? WHERE ?", [{
                                 StockQuantity: (chosenItem.StockQuantity-qty)
                             }, {
@@ -88,6 +102,7 @@ var buy = function() {
                                 console.log("Item purchased successfully!");
 							});
 
+                        	// Once the update goes through, show the customer the total cost of their purchase.
                             console.log("The Total Price for "+parseInt(answer.quantity)+" "+chosenItem.ProductName+ "(s) is "+chosenItem.Price*parseInt(answer.quantity));
 
                            
